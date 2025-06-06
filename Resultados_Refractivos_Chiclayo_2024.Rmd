@@ -1,0 +1,402 @@
+
+```{r setup, include=FALSE}
+library(gtsummary)
+library(tidyverse)
+library(dplyr)
+library(gmodels)
+library(dplyr)
+library(readxl)
+
+cami <- read_excel("data.xlsx")
+
+# Establecer idioma a español
+theme_gtsummary_language("es")
+
+```
+Tabla 1. Tipos de errores refractivos, como miopía, hipermetropía y astigmatismo, presentes en estudiantes de secundaria en un colegio de Chiclayo, 2024.
+
+```{r, echo=FALSE, message=FALSE}
+cami <- cami %>%
+  mutate(
+    sph_derecho = as.numeric(sph_derecho),
+    sph_izquierdo = as.numeric(sph_izquierdo),
+    cyl_derecho = as.numeric(cyl_derecho),
+    cyl_izquierdo = as.numeric(cyl_izquierdo),
+    
+    miopia = if_else(sph_derecho < 0 | sph_izquierdo < 0, "Sí", "No"),
+    hipermetropia = if_else(sph_derecho > 0 | sph_izquierdo > 0, "Sí", "No"),
+    astigmatismo = if_else(abs(cyl_derecho) >= 0.5 | abs(cyl_izquierdo) >= 0.5, "Sí", "No")
+  ) %>%
+  mutate(
+    miopia = factor(miopia, levels = c("No", "Sí")),
+    hipermetropia = factor(hipermetropia, levels = c("No", "Sí")),
+    astigmatismo = factor(astigmatismo, levels = c("No", "Sí"))
+  )
+
+
+# Asegurar que las variables sean numéricas
+cami <- cami %>%
+  mutate(
+    sph_derecho = as.numeric(sph_derecho),
+    cyl_derecho = as.numeric(cyl_derecho),
+    eje_derecho = as.numeric(eje_derecho),
+    sph_izquierdo = as.numeric(sph_izquierdo),
+    cyl_izquierdo = as.numeric(cyl_izquierdo),
+    eje_izquierdo = as.numeric(eje_izquierdo)
+  )
+
+# Generar tabla con estadísticos numéricos (mediana y RIQ)
+tabla_frecuencias <- cami %>%
+  select(
+    miopia, hipermetropia, astigmatismo
+  ) %>%
+  tbl_summary() 
+
+#Resto de tablas
+tabla_miopia_detalle <- cami %>%
+  filter(miopia == "Sí") %>%
+  mutate(
+    sph_derecho = as.numeric(sph_derecho),
+    sph_izquierdo = as.numeric(sph_izquierdo)
+  ) %>%
+  select(`SPH derecho` = sph_derecho, `SPH izquierdo` = sph_izquierdo) %>%
+  tbl_summary(
+    type = list(
+      `SPH derecho` ~ "continuous",
+      `SPH izquierdo` ~ "continuous"
+    ),
+    statistic = all_continuous() ~ "{median} ({p25}, {p75})"
+  ) %>%
+  bold_labels()
+
+
+tabla_hipermetropia_detalle <- cami %>%
+  filter(hipermetropia == "Sí") %>%
+  mutate(
+    sph_derecho = as.numeric(sph_derecho),
+    sph_izquierdo = as.numeric(sph_izquierdo)
+  ) %>%
+  select(`SPH derecho` = sph_derecho, `SPH izquierdo` = sph_izquierdo) %>%
+  tbl_summary(
+    type = list(
+      `SPH derecho` ~ "continuous",
+      `SPH izquierdo` ~ "continuous"
+    ),
+    statistic = all_continuous() ~ "{median} ({p25}, {p75})"
+  ) %>%
+  bold_labels()
+
+
+
+tabla_astigmatismo_detalle <- cami %>%
+  filter(astigmatismo == "Sí") %>%
+  mutate(
+    cyl_derecho = as.numeric(cyl_derecho),
+    eje_derecho = as.numeric(eje_derecho),
+    cyl_izquierdo = as.numeric(cyl_izquierdo),
+    eje_izquierdo = as.numeric(eje_izquierdo)
+  ) %>%
+  select(
+    `CYL derecho` = cyl_derecho,
+    `Eje derecho` = eje_derecho,
+    `CYL izquierdo` = cyl_izquierdo,
+    `Eje izquierdo` = eje_izquierdo
+  ) %>%
+  tbl_summary(
+    type = list(
+      `CYL derecho` ~ "continuous",
+      `Eje derecho` ~ "continuous",
+      `CYL izquierdo` ~ "continuous",
+      `Eje izquierdo` ~ "continuous"
+    ),
+    statistic = all_continuous() ~ "{median} ({p25}, {p75})"
+  ) %>%
+  bold_labels()
+
+#Unificando las tablas
+
+# Unir todas las tablas en una sola
+tabla1_completa <- tbl_stack(
+  list(
+    tabla_frecuencias,
+    tabla_miopia_detalle,
+    tabla_hipermetropia_detalle,
+    tabla_astigmatismo_detalle
+  )
+)
+
+tabla1_completa
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+Tabla 2. Tiempo de exposición diario a pantallas digitales en estudiantes de secundaria en un colegio de Chiclayo, 2024.
+```{r, echo=FALSE, message=FALSE}
+tabla2 <- cami %>%
+  select(2:14) %>%
+  tbl_summary() %>%
+  bold_labels()
+
+tabla2
+```
+
+Tabla 3. Relación entre miopía y el tiempo de exposición a pantallas digitales, mediante la prueba de Chi-cuadrado, en estudiantes de secundaria en un colegio de Chiclayo, 2024.
+```{r, echo=FALSE, message=FALSE}
+cami <- cami %>%
+  mutate(
+    uso_tablet_agru = case_when(
+      uso_tablet %in% c("3 - 4 horas", "5 - 6 horas", "Más de 6 horas") ~ "≥ 3 horas",
+      uso_tablet == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_televisor_agru = case_when(
+      uso_televisor %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_televisor == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_televisor == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_computador_agru = case_when(
+      uso_computador %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_computador == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_computador == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_tablet_agru = factor(uso_tablet_agru, levels = c("1 - 2 horas", "≥ 3 horas")),
+    uso_televisor_agru = factor(uso_televisor_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas")),
+    uso_computador_agru = factor(uso_computador_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas"))
+  )
+
+tabla_miopia <- cami %>%
+  select(miopia, uso_celular, uso_tablet_agru, uso_computador_agru, uso_televisor_agru) %>%
+  tbl_summary(by = miopia, missing = "no", percent = "row") %>%
+  bold_labels() %>%
+  add_p()
+
+tabla_miopia
+```
+
+Tabla 4. Relación entre hipermetropía y el tiempo de exposición a pantallas digitales, mediante la prueba de Chi-cuadrado, en estudiantes de secundaria en un colegio de Chiclayo, 2024.
+
+```{r, echo=FALSE, message=FALSE}
+cami <- cami %>%
+  mutate(
+    uso_tablet_agru = case_when(
+      uso_tablet %in% c("3 - 4 horas", "5 - 6 horas", "Más de 6 horas") ~ "≥ 3 horas",
+      uso_tablet == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_televisor_agru = case_when(
+      uso_televisor %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_televisor == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_televisor == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_computador_agru = case_when(
+      uso_computador %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_computador == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_computador == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_tablet_agru = factor(uso_tablet_agru, levels = c("1 - 2 horas", "≥ 3 horas")),
+    uso_televisor_agru = factor(uso_televisor_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas")),
+    uso_computador_agru = factor(uso_computador_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas"))
+  )
+
+# Tabla 4: Relación entre hipermetropía y el tiempo de exposición a pantallas digitales (agrupada)
+
+tabla_hipermetropia <- cami %>%
+  select(hipermetropia, uso_celular, uso_tablet_agru, uso_computador_agru, uso_televisor_agru) %>%
+  tbl_summary(
+    by = hipermetropia,
+    missing = "no",
+    percent = "row",
+    digits = all_categorical() ~ c(0, 1)
+  ) %>%
+  bold_labels() %>%
+  add_p()
+```
+
+
+Tabla 5. Relación entre astigmatismo y el tiempo de exposición a pantallas digitales, mediante la prueba de Chi-cuadrado, en estudiantes de secundaria en un colegio de Chiclayo, 2024.
+```{r, echo=FALSE, message=FALSE}
+cami <- cami %>%
+  mutate(
+    uso_tablet_agru = case_when(
+      uso_tablet %in% c("3 - 4 horas", "5 - 6 horas", "Más de 6 horas") ~ "≥ 3 horas",
+      uso_tablet == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_televisor_agru = case_when(
+      uso_televisor %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_televisor == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_televisor == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_computador_agru = case_when(
+      uso_computador %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      uso_computador == "3 - 4 horas" ~ "3 - 4 horas",
+      uso_computador == "1 - 2 horas" ~ "1 - 2 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_tablet_agru = factor(uso_tablet_agru, levels = c("1 - 2 horas", "≥ 3 horas")),
+    uso_televisor_agru = factor(uso_televisor_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas")),
+    uso_computador_agru = factor(uso_computador_agru, levels = c("1 - 2 horas", "3 - 4 horas", "≥ 5 horas"))
+  )
+
+tabla_astigmatismo <- cami %>%
+  select(astigmatismo, uso_celular, uso_tablet_agru, uso_computador_agru, uso_televisor_agru) %>%
+  tbl_summary(by = astigmatismo, missing = "no", percent = "row") %>%
+  bold_labels() %>%
+  add_p()
+
+tabla_astigmatismo
+```
+
+
+
+
+
+REGRESIÓN
+```{r}
+library(gtsummary)
+library(dplyr)
+
+# 1. Crear variable defecto_refractivo (0 = ausencia, 1 = presencia)
+# Crear variable defecto_refractivo
+cami <- cami %>%
+  mutate(
+    defecto_refractivo = if_else(miopia == "Sí" | hipermetropia == "Sí" | astigmatismo == "Sí", 1, 0)
+  )
+
+# Agrupar todas las variables de exposición digital
+cami <- cami %>%
+  mutate(
+    uso_celular_agru = case_when(
+      uso_celular %in% c("1 - 2 horas", "3 - 4 horas") ~ "1 - 4 horas",
+      uso_celular %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_tablet_agru = case_when(
+      uso_tablet %in% c("1 - 2 horas", "3 - 4 horas") ~ "1 - 4 horas",
+      uso_tablet %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_computador_agru = case_when(
+      uso_computador %in% c("1 - 2 horas", "3 - 4 horas") ~ "1 - 4 horas",
+      uso_computador %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      TRUE ~ NA_character_
+    ),
+    uso_televisor_agru = case_when(
+      uso_televisor %in% c("1 - 2 horas", "3 - 4 horas") ~ "1 - 4 horas",
+      uso_televisor %in% c("5 - 6 horas", "Más de 6 horas") ~ "≥ 5 horas",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  mutate(
+    defecto_refractivo = factor(defecto_refractivo),
+    uso_celular_agru = factor(uso_celular_agru, levels = c("1 - 4 horas", "≥ 5 horas")),
+    uso_tablet_agru = factor(uso_tablet_agru, levels = c("1 - 4 horas", "≥ 5 horas")),
+    uso_computador_agru = factor(uso_computador_agru, levels = c("1 - 4 horas", "≥ 5 horas")),
+    uso_televisor_agru = factor(uso_televisor_agru, levels = c("1 - 4 horas", "≥ 5 horas"))
+  )
+
+# Tabla de OR crudos para cada dispositivo
+or_crudo_agrupado <- tbl_uvregression(
+  data = cami %>%
+    select(defecto_refractivo, uso_celular_agru, uso_tablet_agru, uso_computador_agru, uso_televisor_agru),
+  method = glm,
+  y = "defecto_refractivo",
+  method.args = list(family = binomial),
+  exponentiate = TRUE
+) %>%
+  add_global_p() %>%
+  bold_p(t = 0.05) %>%
+  bold_labels() %>%
+  italicize_levels()
+
+or_crudo_agrupado
+
+```
+
+Modelo ajustado
+
+```{r}
+library(gtsummary)
+library(dplyr)
+
+# Asegurar que todas las variables estén como factor si corresponde
+cami <- cami %>%
+  mutate(
+    defecto_refractivo = factor(defecto_refractivo),
+    sexo = factor(sexo),
+    `¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?` = factor(`¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?`),
+    `¿visita regularmente al oftalmólogo?` = factor(`¿visita regularmente al oftalmólogo?`)
+  )
+
+# Modelo ajustado para celular
+modelo_celular <- glm(defecto_refractivo ~ uso_celular_agru + edad + sexo +
+                        `¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?` +
+                        `¿visita regularmente al oftalmólogo?`,
+                      data = cami, family = binomial)
+
+tabla_celular <- tbl_regression(modelo_celular, exponentiate = TRUE) %>%
+  bold_labels() %>%
+  bold_p(t = 0.05)
+
+# Modelo ajustado para tablet
+modelo_tablet <- glm(defecto_refractivo ~ uso_tablet_agru + edad + sexo +
+                       `¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?` +
+                       `¿visita regularmente al oftalmólogo?`,
+                     data = cami, family = binomial)
+
+tabla_tablet <- tbl_regression(modelo_tablet, exponentiate = TRUE) %>%
+  bold_labels() %>%
+  bold_p(t = 0.05)
+
+# Modelo ajustado para computador
+modelo_computador <- glm(defecto_refractivo ~ uso_computador_agru + edad + sexo +
+                           `¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?` +
+                           `¿visita regularmente al oftalmólogo?`,
+                         data = cami, family = binomial)
+
+tabla_computador <- tbl_regression(modelo_computador, exponentiate = TRUE) %>%
+  bold_labels() %>%
+  bold_p(t = 0.05)
+
+# Modelo ajustado para televisor
+modelo_televisor <- glm(defecto_refractivo ~ uso_televisor_agru + edad + sexo +
+                          `¿tiene algún familiar directo (padres, hermanos) con errores refractivos (miopía, hipermetropía, astigmatismo)?` +
+                          `¿visita regularmente al oftalmólogo?`,
+                        data = cami, family = binomial)
+
+tabla_televisor <- tbl_regression(modelo_televisor, exponentiate = TRUE) %>%
+  bold_labels() %>%
+  bold_p(t = 0.05)
+
+tabla_computador
+tabla_televisor
+tabla_celular
+tabla_tablet
+
+
+# Si deseas mostrar todo junto
+tbl_merge(
+  tbls = list(tabla_celular, tabla_tablet, tabla_computador, tabla_televisor),
+  tab_spanner = c("Uso de celular", "Uso de tablet", "Uso de computador", "Uso de televisor")
+)
+
+```
+
+
