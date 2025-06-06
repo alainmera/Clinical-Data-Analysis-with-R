@@ -1,0 +1,92 @@
+
+```{r setup, include=FALSE}
+options(gtsummary.lang = "es")
+
+library(gtsummary)
+library(tidyverse)
+library(dplyr)
+library(gmodels)
+library(dplyr)
+library(readxl)
+library(janitor)
+# Establecer idioma a español
+theme_gtsummary_language("es")
+
+
+# Leer Excel y limpiar nombres
+factores_calidad <- read_excel("factores_calidad.xlsx") 
+clima_laboral <- read_excel("clima_laboral.xlsx")
+```
+
+Tabla 1. Descripción de variables sociodemográficas de los clientes y la calidad de atención percibida
+```{r, echo=FALSE}
+tab2 <- factores_calidad  %>% tbl_summary()
+tab2
+```
+
+Respuestas del cuestionario sobre la calidad de atención
+```{r,echo=FALSE}
+# Leer hoja "respuestas" del archivo factores_calidad.xlsx
+factores_calidad_rpsta <- read_excel("factores_calidad.xlsx", sheet = "respuestas") %>%
+  clean_names()
+
+# Leer hoja "respuestas" del archivo clima_laboral.xlsx
+clima_laboral_rpsta <- read_excel("clima_laboral.xlsx", sheet = "respuestas") %>%
+  clean_names()
+
+# Tabla descriptiva de respuestas de clientes
+tab_factores_rpsta <- factores_calidad_rpsta %>% 
+  tbl_summary()
+tab_factores_rpsta
+```
+
+Calidad según diversos factores
+```{r,echo=FALSE}
+cruce <- factores_calidad %>%
+  select(1:10) 
+
+tacruce <- cruce %>% tbl_summary(
+    by = calidad_cat) %>%
+  add_p()
+tacruce
+```
+
+
+Descripción del clima laboral y sus dimensiones
+```{r, echo=FALSE}
+clima_laboral %>%
+  select(
+    puntaje_orientacion, puntaje_talento, puntaje_direccion,
+    puntaje_comunicacion, puntaje_grupo, puntaje_capacidad,
+    puntaje_ambiente, total_clima, total_cat
+  ) %>%
+  tbl_summary(
+    type = all_continuous() ~ "continuous",  # 👈 fuerza continuo
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    label = list(
+      puntaje_orientacion ~ "Orientación organizacional",
+      puntaje_talento ~ "Administración del talento humano",
+      puntaje_direccion ~ "Estilo de dirección",
+      puntaje_comunicacion ~ "Comunicación e integración",
+      puntaje_grupo ~ "Trabajo en grupo",
+      puntaje_capacidad ~ "Capacidad profesional",
+      puntaje_ambiente ~ "Ambiente físico",
+      total_clima ~ "Puntaje total del clima laboral",
+      total_cat ~ "Nivel global del clima laboral"
+    )
+  ) %>%
+  modify_caption("**Tabla 3. Puntajes por dimensión del clima laboral y nivel global (Mediana y RIQ)**")
+
+```
+
+Determinar las respuesta a las preguntas sobre clima laboral
+```{r, echo=FALSE}
+# Tabla descriptiva de respuestas de trabajadores
+tab_clima_rpsta <- clima_laboral_rpsta %>% 
+  tbl_summary()
+tab_clima_rpsta
+
+```
