@@ -1,0 +1,6 @@
+Variable            | Description
+--------------------|----------------------------------------------
+sexo               | Gender of the respondent (M/F)
+edad               | Age in years
+calidad_cat        | Overall perceived service quality (Low–High)
+puntaje_direccion  | Leadership dimension score (0–20)
